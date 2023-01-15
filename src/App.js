@@ -1,25 +1,54 @@
-import logo from './logo.svg';
-import './App.css';
+import * as React from "react";
+import { Routes, Route, Outlet, Link } from "react-router-dom";
+import Docs from './Pages/Docs'
+import Home from './Pages/Home'
 
-function App() {
+export default function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Eat <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="docs" element={<Docs />} />
+          <Route path="*" element={<NoMatch />} />
+        </Route>
+      </Routes>
     </div>
   );
 }
 
-export default App;
+function Layout() {
+  return (
+    <div>
+      <Outlet />
+    </div>
+  );
+}
+
+function About() {
+  return (
+    <div>
+      <h2>About</h2>
+    </div>
+  );
+}
+
+function Dashboard() {
+  return (
+    <div>
+      <h2>Dashboard</h2>
+    </div>
+  );
+}
+
+function NoMatch() {
+  return (
+    <div>
+      <h2>Nothing to see here!</h2>
+      <p>
+        <Link to="/">Go to the home page</Link>
+      </p>
+    </div>
+  );
+}
