@@ -5,8 +5,21 @@ import * as ICS from 'ics-js'
 import { Component, Property } from 'immutable-ics'
 import { v4 as uuidv4 } from 'uuid';
 import { saveAs } from 'file-saver';
+import Grid from '@mui/material/Grid';
+import { styled } from '@mui/material/styles';
+import Box from '@mui/material/Box';
+import { Paper } from '@mui/material';
 
+import '../styles.css'
 
+const Item = styled(Paper)(({ theme }) => ({
+    backgroundColor: theme.palette.mode === 'dark' ? '#1A2027' : '#fff',
+    ...theme.typography.body2,
+    padding: theme.spacing(1),
+    textAlign: 'center',
+    color: theme.palette.text.secondary,
+    height: '100%',
+}));
 
 const Home = () => {
 
@@ -18,18 +31,22 @@ const Home = () => {
     }
 
     const handleCalandarExport = () => {
-        //const cal = new ICS.VCALENDAR();
+
         let cal = new Component({
             name: 'VCALENDAR',
             properties: [
-              new Property({ name: 'VERSION', value: 2 }),
-              new Property({ name: 'PRODID', value: 'WPI Workday To ICal Generator'})
+                new Property({ name: 'VERSION', value: 2 }),
+                new Property({ name: 'PRODID', value: 'WPI Workday To ICal Generator' })
             ]
         })
 
 
         formattedSchedulingData.map(course => {
             console.log(course)
+            if (!course.is_active) {
+                console.log("skipping this one.")
+                return
+            }
             let [startTime, endTime] = course.meeting_time.split(" - ")
             let timeBlockLength = getTimeBlockLengthInMins(course.meeting_time)
             let timeBlockStartInMins = convertTimeStringToMinutes(startTime)
@@ -46,32 +63,32 @@ const Home = () => {
             let event = new Component({ name: 'VEVENT' })
             event = event.pushProperty(new Property({
                 name: 'UID',
-                parameters: {VALUE: 'TEXT'},
+                parameters: { VALUE: 'TEXT' },
                 value: uuidv4()
             }))
             event = event.pushProperty(new Property({
                 name: 'DTSTAMP',
-                parameters: {VALUE: 'DATE-TIME'},
+                parameters: { VALUE: 'DATE-TIME' },
                 value: new Date()
             }))
             event = event.pushProperty(new Property({
                 name: 'DTSTART',
-                parameters: {VALUE: 'DATE-TIME'},
+                parameters: { VALUE: 'DATE-TIME' },
                 value: startDateObject
             }))
             event = event.pushProperty(new Property({
                 name: 'DTEND',
-                parameters: {VALUE: 'DATE-TIME'},
+                parameters: { VALUE: 'DATE-TIME' },
                 value: endDateObject
             }))
             event = event.pushProperty(new Property({
                 name: 'SUMMARY',
-                parameters: {VALUE: 'TEXT'},
+                parameters: { VALUE: 'TEXT' },
                 value: course.course_title
             }))
             event = event.pushProperty(new Property({
                 name: 'LOCATION',
-                parameters: {VALUE: 'TEXT'},
+                parameters: { VALUE: 'TEXT' },
                 value: course.location
             }))
             event = event.pushProperty(new Property({
@@ -84,7 +101,7 @@ const Home = () => {
         })
 
         console.log(cal.toString())
-        let calandarBlob = new Blob([cal.toString()], {type: "text/calandar;charset=utf-8"});
+        let calandarBlob = new Blob([cal.toString()], { type: "text/calandar;charset=utf-8" });
         saveAs(calandarBlob, "calandar.ics");
 
 
@@ -95,26 +112,79 @@ const Home = () => {
 
     return (
         <div>
-            <p>Main page!</p>
-            <Link to="/docs">How do I use this?</Link>
-            <hr />
-            <input type="file" id="input" onChange={handleFileSelected} />
+            <div className='heading'>
+                <h1>Workday Calandar Generator</h1>
+                <p>Because I hate manually adding all my classes to outlook.</p>
+            </div>
 
-            {/* <div className='courseTable'>
-                <div className='courseTableRow'>
-                    <div>Course Title</div>
-                    <div>Instructor</div>
-                    <div></div>
-                </div>
-                {formattedSchedulingData.map(schedulingData => {
-                    <div className='courseEntry'>
-                        <div></div>
-                    </div>
-                })}
 
-            </div> */}
+            <div className='fileSelector'>Exported workday schedule (.xlsx): <input type="file" id="input" onChange={handleFileSelected} /></div>
+            {formattedSchedulingData.length == 0 ? null : (
+                <>
+                    <Grid container className='courseGrid'>
+                        <Grid item xs={1}>
+                            <Item style={{ height: '100%' }}>Active</Item>
+                        </Grid>
+                        <Grid item xs={2}>
+                            <Item>Course Title</Item>
+                        </Grid>
+                        <Grid item xs={2}>
+                            <Item>Instructor</Item>
+                        </Grid>
+                        <Grid item xs={3}>
+                            <Item>Meeting Schedule</Item>
+                        </Grid>
+                        <Grid item xs={2}>
+                            <Item>Course Start</Item>
+                        </Grid>
+                        <Grid item xs={2}><Item>Course End</Item></Grid>
 
-            <button onClick={handleCalandarExport}>Export Calendar File</button>
+                        {formattedSchedulingData.map((schedulingData, index) => {
+                            return (
+                                <>
+                                    <Grid item xs={1} className="gridItem">
+                                        <Item><input type="checkbox" checked={schedulingData.is_active} onChange={() => {
+                                            let currentCourseData = { ...schedulingData }
+                                            currentCourseData.is_active = !currentCourseData.is_active
+                                            let updatedState = [...formattedSchedulingData]
+                                            updatedState[index] = currentCourseData
+                                            setFormattedSchedulingData([...updatedState])
+                                        }}></input></Item>
+                                    </Grid>
+                                    <Grid item xs={2} className="gridItem">
+                                        <Item>{schedulingData.course_title}</Item>
+                                    </Grid>
+                                    <Grid item xs={2} className="gridItem">
+                                        <Item>{schedulingData.instructor}</Item>
+                                    </Grid>
+                                    <Grid item xs={3} className="gridItem">
+                                        <Item>{schedulingData.meeting_pattern_raw}</Item>
+                                    </Grid>
+                                    <Grid item xs={2} className="gridItem">
+                                        <Item>{new Date(schedulingData.start_date).toDateString()}</Item>
+                                    </Grid>
+                                    <Grid item xs={2} className="gridItem"><Item>{new Date(schedulingData.end_date).toDateString()}</Item></Grid>
+
+
+
+
+
+
+                                </>
+                            )
+                        })}
+
+                    </Grid>
+
+
+                    <div className='exportButton'><button onClick={handleCalandarExport}>Export Calendar File</button></div>
+                </>
+            )
+            }
+
+            <div className='docsLink'>
+                New? Check out our <Link to="/docs">docs</Link> to learn how to use this site.
+            </div>
 
         </div>
     )
@@ -149,7 +219,7 @@ const formatRawCalandarDataAndSetState = (file, setFormattedSchedulingData) => {
         const ws = wb.Sheets[wsname];
         /* Convert array of arrays */
         console.log('ws>>', ws)
-        let rawRowArray = (XLSX.utils.sheet_to_json(ws, { raw: true, range: "A1:L13" }));
+        let rawRowArray = (XLSX.utils.sheet_to_json(ws, { raw: true, range: "A1:L44" }));
 
         /* Fix key names */
         let badKeyNames = Object.keys(rawRowArray[2])
@@ -174,27 +244,28 @@ const formatRawCalandarDataAndSetState = (file, setFormattedSchedulingData) => {
             meeting_days = meeting_days.toString()
             console.log(meeting_days)
             meeting_days = meeting_days.replaceAll(" ", "").replaceAll("-", ",").replaceAll("M", "MO").replaceAll("T", "TU").replaceAll("W", "WE").replaceAll("R", "TH").replaceAll("F", "FR") //format data for use as RRULE
-            meeting_time = meeting_time.replace(" ",  '')
+            meeting_time = meeting_time.replace(" ", '')
             let startDateString = ExcelDateToJSDate(parseInt(row["Start Date"])).valueOf()
             let endDateString = ExcelDateToJSDate(parseInt(row["End Date"])).valueOf()
 
             let courseObject = {
                 course_title: row["Course Listing"],
+                meeting_pattern_raw: row["Meeting Patterns"],
                 meeting_days: meeting_days,
                 meeting_time: meeting_time,
                 location: location,
                 instructor: row["Instructor"],
                 start_date: startDateString,
-                end_date: endDateString
-
+                end_date: endDateString,
+                is_active: true
             }
             formattedDataArray.push(courseObject)
         })
+        setFormattedSchedulingData([...formattedDataArray])
 
 
     };
     reader.readAsBinaryString(file);
-    setFormattedSchedulingData(formattedDataArray)
 
     // fix key names
 
