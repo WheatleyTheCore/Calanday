@@ -240,6 +240,9 @@ const formatRawCalandarDataAndSetState = (file, setFormattedSchedulingData) => {
 
 
         rawRowArray.forEach(row => {
+            if (!row['Meeting Patterns']) {
+                return
+            }   
             let [meeting_days, meeting_time, location] = row["Meeting Patterns"].split("|")
             meeting_days = meeting_days.toString()
             console.log(meeting_days)

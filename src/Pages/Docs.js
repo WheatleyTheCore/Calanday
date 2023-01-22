@@ -23,7 +23,7 @@ const Docs = () => {
                 </div>
                 <h4 style={{paddingLeft: "2%"}}>3. Deselect courses you don't want added to your schedule</h4>
                 <div className='tutorialStep'>
-                    <p>Only courses marked "active" will be exported, so delect any you don't want to import into your calandar.</p>
+                    <p>Only courses marked "active" will be exported, so deselect any you don't want to import into your calandar.</p>
                 </div>
                 <h4 style={{paddingLeft: "2%"}}>4. Export the calandar file</h4>
                 <div className='tutorialStep'>
