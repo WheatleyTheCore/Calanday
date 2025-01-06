@@ -9,7 +9,10 @@ import Grid from '@mui/material/Grid';
 import { styled } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import { Paper } from '@mui/material';
-
+import timeStringToMins from '../shared/utils/timeStringToMins'
+import getTimeBlockLengthInMins from '../shared/utils/getTimeBlockLengthInMins'
+import excelDateToJSDate from '../shared/utils/excelDateToJSDate'
+import exportCalendarToICS from '../shared/utils/exportCalendarToICS.js'
 import '../styles.css'
 
 const Item = styled(Paper)(({ theme }) => ({
@@ -23,11 +26,12 @@ const Item = styled(Paper)(({ theme }) => ({
 
 const Home = () => {
 
-    const [formattedSchedulingData, setFormattedSchedulingData] = useState([]);
+    const [calendarData, setCalendarData] = useState([]);
 
 
-    const handleFileSelected = (event) => {
-        formatRawCalandarDataAndSetState(event.target.files[0], setFormattedSchedulingData) //this is such a jank function name
+    const handleFileUpload = (event) => {
+        // should really do some sort of checking here to see if it's normal
+        formatRawCalandarDataAndSetState(event.target.files[0], setCalendarData) //this is such a jank function name
     }
 
     const handleCalandarExport = () => {
@@ -41,7 +45,7 @@ const Home = () => {
         })
 
 
-        formattedSchedulingData.map(course => {
+        calendarData.map(course => {
             console.log(course)
             if (!course.is_active) {
                 console.log("skipping this one.")
@@ -49,7 +53,7 @@ const Home = () => {
             }
             let [startTime, endTime] = course.meeting_time.split(" - ")
             let timeBlockLength = getTimeBlockLengthInMins(course.meeting_time)
-            let timeBlockStartInMins = convertTimeStringToMinutes(startTime)
+            let timeBlockStartInMins = timeStringToMins(startTime)
             console.log('startMins: ', timeBlockStartInMins, 'length', timeBlockLength)
 
             // get date object for DTSTART
@@ -108,7 +112,7 @@ const Home = () => {
     }
 
 
-
+    console.log(calendarData)
 
     return (
         <div>
@@ -118,8 +122,8 @@ const Home = () => {
             </div>
 
 
-            <div className='fileSelector'>Exported workday schedule (.xlsx): <input type="file" id="input" onChange={handleFileSelected} /></div>
-            {formattedSchedulingData.length == 0 ? null : (
+            <div className='fileSelector'>Exported workday schedule (.xlsx): <input type="file" id="input" onChange={handleFileUpload} /></div>
+            {calendarData.length == 0 ? null : (
                 <>
                     <Grid container className='courseGrid'>
                         <Grid item xs={1}>
@@ -139,16 +143,16 @@ const Home = () => {
                         </Grid>
                         <Grid item xs={2}><Item>Course End</Item></Grid>
 
-                        {formattedSchedulingData.map((schedulingData, index) => {
+                        {calendarData.map((schedulingData, index) => {
                             return (
                                 <>
                                     <Grid item xs={1} className="gridItem">
                                         <Item><input type="checkbox" checked={schedulingData.is_active} onChange={() => {
                                             let currentCourseData = { ...schedulingData }
                                             currentCourseData.is_active = !currentCourseData.is_active
-                                            let updatedState = [...formattedSchedulingData]
+                                            let updatedState = [...calendarData]
                                             updatedState[index] = currentCourseData
-                                            setFormattedSchedulingData([...updatedState])
+                                            setCalendarData([...updatedState])
                                         }}></input></Item>
                                     </Grid>
                                     <Grid item xs={2} className="gridItem">
@@ -204,7 +208,7 @@ const Home = () => {
  * ]
  */
 
-const formatRawCalandarDataAndSetState = (file, setFormattedSchedulingData) => {
+const formatRawCalandarDataAndSetState = (file, setCalendarData) => {
     let formattedDataArray = []
 
     const reader = new FileReader();
@@ -248,8 +252,8 @@ const formatRawCalandarDataAndSetState = (file, setFormattedSchedulingData) => {
             console.log(meeting_days)
             meeting_days = meeting_days.replaceAll(" ", "").replaceAll("-", ",").replaceAll("M", "MO").replaceAll("T", "TU").replaceAll("W", "WE").replaceAll("R", "TH").replaceAll("F", "FR") //format data for use as RRULE
             meeting_time = meeting_time.replace(" ", '')
-            let startDateString = ExcelDateToJSDate(parseInt(row["Start Date"])).valueOf()
-            let endDateString = ExcelDateToJSDate(parseInt(row["End Date"])).valueOf()
+            let startDateString = excelDateToJSDate(parseInt(row["Start Date"])).valueOf()
+            let endDateString = excelDateToJSDate(parseInt(row["End Date"])).valueOf()
 
             let courseObject = {
                 course_title: row["Course Listing"],
@@ -264,65 +268,14 @@ const formatRawCalandarDataAndSetState = (file, setFormattedSchedulingData) => {
             }
             formattedDataArray.push(courseObject)
         })
-        setFormattedSchedulingData([...formattedDataArray])
+        setCalendarData([...formattedDataArray])
 
 
     };
     reader.readAsBinaryString(file);
 
     // fix key names
-
-
 }
 
-function ExcelDateToJSDate(serial) {
-    var utc_days = Math.floor(serial - 25568);
-    var utc_value = utc_days * 86400;
-    var date_info = new Date(utc_value * 1000);
-
-    var fractional_day = serial - Math.floor(serial) + 0.0000001;
-
-    var total_seconds = Math.floor(86400 * fractional_day);
-
-    var seconds = total_seconds % 60;
-
-    total_seconds -= seconds;
-
-    var hours = Math.floor(total_seconds / (60 * 60));
-    var minutes = Math.floor(total_seconds / 60) % 60;
-
-    return new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate(), hours, minutes, seconds);
-}
-
-const getTimeBlockLengthInMins = (timeString) => {
-
-    let [startTime, endTime] = timeString.split(" - ")
-    let mins = convertTimeStringToMinutes(endTime) - convertTimeStringToMinutes(startTime)
-    return mins
-}
-
-const convertTimeStringToMinutes = (timeString) => {
-    let totalMins
-    if (timeString.includes("PM")) {
-        timeString.replace(" PM", "")
-        let [hours, mins] = timeString.split(":")
-
-        hours = parseInt(hours)
-        mins = parseInt(mins)
-        if (hours != 12) hours += 12
-
-        mins += hours * 60
-        totalMins = mins
-    } else {
-        timeString.replace(" AM", "")
-        let [hours, mins] = timeString.split(":")
-        hours = parseInt(hours)
-        mins = parseInt(mins)
-
-        mins += hours * 60
-        totalMins = mins
-    }
-    return totalMins
-}
 
 export default Home
