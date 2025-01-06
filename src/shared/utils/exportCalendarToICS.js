@@ -72,6 +72,10 @@ const exportCalendarToICS = calendarObject => {
                 // parameters: {VALUE: 'RECUR'},
                 value: `FREQ=WEEKLY;BYDAY=${course.meeting_days};INTERVAL=1;UNTIL=${untilDateObject.toISOString().substr(0, 10).replaceAll("-", "")}T000000Z`
             }))
+            event = event.pushProperty(new Property({
+                name: "DESCRIPTION",
+                value: `Taught by ${course.instructor}`
+            }))
 
             cal = cal.pushComponent(event)
         })

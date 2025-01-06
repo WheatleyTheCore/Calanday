@@ -11,13 +11,12 @@ import Link from '@mui/material/Link';
 const CustomAppBar = () => {
   return (
     <AppBar position="static">
-      <Container maxWidth="xl">
-        <Toolbar disableGutters>
+        <Toolbar>
           <Typography
             variant="h6"
             noWrap
             component="a"
-            href="#app-bar-with-responsive-menu"
+            href="/"
             sx={{
               mr: 2,
               display: { xs: "none", md: "flex" },
@@ -39,7 +38,6 @@ const CustomAppBar = () => {
             </Link>
           </Box>
         </Toolbar>
-      </Container>
     </AppBar>
   );
 };

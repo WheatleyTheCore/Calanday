@@ -16,6 +16,7 @@ import excelDateToJSDate from "../shared/utils/excelDateToJSDate";
 import exportCalendarToICS from "../shared/utils/exportCalendarToICS.js";
 import "../styles.css";
 import CustomAppBar from "../widgets/CustomAppBar.js";
+import EditableField from "../shared/EditableField/ui/EditableField.js";
 
 const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: theme.palette.mode === "dark" ? "#1A2027" : "#fff",
@@ -34,119 +35,6 @@ const Home = () => {
     formatRawCalandarDataAndSetState(event.target.files[0], setCalendarData); //this is such a jank function name
   };
 
-  const handleCalandarExport = () => {
-    let cal = new Component({
-      name: "VCALENDAR",
-      properties: [
-        new Property({ name: "VERSION", value: 2 }),
-        new Property({
-          name: "PRODID",
-          value: "WPI Workday To ICal Generator",
-        }),
-      ],
-    });
-
-    calendarData.map((course) => {
-      console.log(course);
-      if (!course.is_active) {
-        console.log("skipping this one.");
-        return;
-      }
-      let [startTime, endTime] = course.meeting_time.split(" - ");
-      let timeBlockLength = getTimeBlockLengthInMins(course.meeting_time);
-      let timeBlockStartInMins = timeStringToMins(startTime);
-      console.log(
-        "startMins: ",
-        timeBlockStartInMins,
-        "length",
-        timeBlockLength
-      );
-
-      // get date object for DTSTART
-      let startDateObject = new Date(
-        course.start_date + timeBlockStartInMins * 60000
-      );
-
-      let endDateObject = new Date(
-        startDateObject.getTime() + timeBlockLength * 60000
-      );
-      let untilDateObject = new Date(course.end_date + 24 * 60 * 60000);
-
-      console.log(
-        "Start:",
-        startDateObject.toString(),
-        "end:",
-        endDateObject.toString()
-      );
-
-      let event = new Component({ name: "VEVENT" });
-      event = event.pushProperty(
-        new Property({
-          name: "UID",
-          parameters: { VALUE: "TEXT" },
-          value: uuidv4(),
-        })
-      );
-      event = event.pushProperty(
-        new Property({
-          name: "DTSTAMP",
-          parameters: { VALUE: "DATE-TIME" },
-          value: new Date(),
-        })
-      );
-      event = event.pushProperty(
-        new Property({
-          name: "DTSTART",
-          parameters: { VALUE: "DATE-TIME" },
-          value: startDateObject,
-        })
-      );
-      event = event.pushProperty(
-        new Property({
-          name: "DTEND",
-          parameters: { VALUE: "DATE-TIME" },
-          value: endDateObject,
-        })
-      );
-      event = event.pushProperty(
-        new Property({
-          name: "SUMMARY",
-          parameters: { VALUE: "TEXT" },
-          value: course.course_title,
-        })
-      );
-      event = event.pushProperty(
-        new Property({
-          name: "LOCATION",
-          parameters: { VALUE: "TEXT" },
-          value: course.location,
-        })
-      );
-      event = event.pushProperty(
-        new Property({
-          name: "RRULE",
-          // parameters: {VALUE: 'RECUR'},
-          value: `FREQ=WEEKLY;BYDAY=${
-            course.meeting_days
-          };INTERVAL=1;UNTIL=${untilDateObject
-            .toISOString()
-            .substr(0, 10)
-            .replaceAll("-", "")}T000000Z`,
-        })
-      );
-
-      cal = cal.pushComponent(event);
-    });
-
-    console.log(cal.toString());
-    let calandarBlob = new Blob([cal.toString()], {
-      type: "text/calandar;charset=utf-8",
-    });
-    saveAs(calandarBlob, "calandar.ics");
-  };
-
-  console.log(calendarData);
-
   return (
     <div>
       <CustomAppBar />
@@ -160,11 +48,11 @@ const Home = () => {
           Exported workday schedule (.xlsx):{" "}
           <input type="file" id="input" onChange={handleFileUpload} />
         </div>
-        {calendarData.length == 0 ? null : (
+        {calendarData.length == [] ? null : (
           <>
             <Grid container className="courseGrid">
               <Grid item xs={1}>
-                <Item style={{ height: "100%" }}>Active</Item>
+                <Item style={{ height: "100%" }}>Enabled</Item>
               </Grid>
               <Grid item xs={2}>
                 <Item>Course Title</Item>
@@ -181,6 +69,12 @@ const Home = () => {
               <Grid item xs={2}>
                 <Item>Course End</Item>
               </Grid>
+
+              {/**
+               *  Just a note as I'm refactoring, the stuff below should really be abstracted out and handled in a more data-driven
+               * way. I don't have the time or energy to do that, but simply it rlly should be done differently.
+               *
+               */}
 
               {calendarData.map((schedulingData, index) => {
                 return (
@@ -202,10 +96,24 @@ const Home = () => {
                       </Item>
                     </Grid>
                     <Grid item xs={2} className="gridItem">
-                      <Item>{schedulingData.course_title}</Item>
+                      <Item>
+                        <EditableField
+                          calendarItemIndex={index}
+                          fieldName="course_title"
+                          calendarData={calendarData}
+                          setCalendarData={setCalendarData}
+                        />
+                      </Item>
                     </Grid>
                     <Grid item xs={2} className="gridItem">
-                      <Item>{schedulingData.instructor}</Item>
+                      <Item>
+                        <EditableField
+                          calendarItemIndex={index}
+                          fieldName="instructor"
+                          calendarData={calendarData}
+                          setCalendarData={setCalendarData}
+                        />
+                      </Item>
                     </Grid>
                     <Grid item xs={3} className="gridItem">
                       <Item>{schedulingData.meeting_pattern_raw}</Item>
